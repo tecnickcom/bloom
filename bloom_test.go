@@ -115,6 +115,16 @@ func TestBasicUint32(t *testing.T) {
 	}
 }
 
+func TestNewWithLowNumbers(t *testing.T) {
+	f := New(0, 0)
+	if f.k != 1 {
+		t.Errorf("%v should be 1", f.k)
+	}
+	if f.m != 1 {
+		t.Errorf("%v should be 1", f.m)
+	}
+}
+
 func TestString(t *testing.T) {
 	f := NewWithEstimates(1000, 0.001)
 	n1 := "Love"
@@ -521,5 +531,67 @@ func TestCopy(t *testing.T) {
 	n2gb := g.Test(n2)
 	if !n2gb {
 		t.Errorf("The value doesn't exist in copy after Add()")
+	}
+}
+
+func TestFrom(t *testing.T) {
+	var (
+		k    = uint(5)
+		data = make([]uint64, 10)
+		test = []byte("test")
+	)
+
+	bf := From(data, k)
+	if bf.K() != k {
+		t.Errorf("Constant k does not match the expected value")
+	}
+
+	if bf.Cap() != uint(len(data)*64) {
+		t.Errorf("Capacity does not match the expected value")
+	}
+
+	if bf.Test(test) {
+		t.Errorf("Bloom filter should not contain the value")
+	}
+
+	bf.Add(test)
+	if !bf.Test(test) {
+		t.Errorf("Bloom filter should contain the value")
+	}
+
+	// create a new Bloom filter from an existing (populated) data slice.
+	bf = From(data, k)
+	if !bf.Test(test) {
+		t.Errorf("Bloom filter should contain the value")
+	}
+}
+
+func TestTestLocations(t *testing.T) {
+	f := NewWithEstimates(1000, 0.001)
+	n1 := []byte("Love")
+	n2 := []byte("is")
+	n3 := []byte("in")
+	n4 := []byte("bloom")
+	f.Add(n1)
+	n3a := f.TestLocations(Locations(n3, f.K()))
+	f.Add(n3)
+	n1b := f.TestLocations(Locations(n1, f.K()))
+	n2b := f.TestLocations(Locations(n2, f.K()))
+	n3b := f.TestLocations(Locations(n3, f.K()))
+	n4b := f.TestLocations(Locations(n4, f.K()))
+	if !n1b {
+		t.Errorf("%v should be in.", n1)
+	}
+	if n2b {
+		t.Errorf("%v should not be in.", n2)
+	}
+	if n3a {
+		t.Errorf("%v should not be in the first time we look.", n3)
+	}
+	if !n3b {
+		t.Errorf("%v should be in the second time we look.", n3)
+	}
+	if n4b {
+		t.Errorf("%v should be in.", n4)
 	}
 }
